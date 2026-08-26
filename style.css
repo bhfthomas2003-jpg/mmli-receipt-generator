@@ -751,6 +751,11 @@ input.invalid, select.invalid{
 .r-sign-line{ border-top:1.3px solid #333; padding-top:4px; font-size:.72rem; color:#5b6b79 !important; }
 .r-sign-label{ font-size:.72rem; font-weight:700; color:#333 !important; }
 
+/* Signature block: no underline — the signature image itself sits lower
+   and centered in a slightly taller box instead of being pinned to a line. */
+.r-sign-img--plain{ height:70px; align-items:center; padding-top:10px; }
+.r-sign-line--plain{ border-top:none; padding-top:0; margin-top:6px; }
+
 .r-footer{
   text-align:center;
   margin-top:20px;

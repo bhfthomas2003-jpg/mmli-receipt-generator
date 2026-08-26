@@ -497,8 +497,8 @@
 
         <div class="r-sign-row">
           <div class="r-sign-block">
-            <div class="r-sign-img"><img src="${getSignatureSrc()}" alt="Authorized signature"></div>
-            <div class="r-sign-line">${escapeHtml(settings.authorizedPerson || "Authorized Signatory")}</div>
+            <div class="r-sign-img r-sign-img--plain"><img src="${getSignatureSrc()}" alt="Authorized signature"></div>
+            <div class="r-sign-line r-sign-line--plain">${escapeHtml(settings.authorizedPerson || "Authorized Signatory")}</div>
             <div class="r-sign-label">Authorized By</div>
           </div>
           <div class="r-sign-block">
@@ -525,17 +525,15 @@
     }
     const canvas = document.createElement("canvas");
     container.appendChild(canvas);
+    // Encode ONLY the verification URL. A QR code is only recognized by a
+    // phone camera as a tappable "open link" if its entire payload is a
+    // single valid URL — mixing in labels/amount/etc. turns it into plain
+    // text that scanners can't act on. Anything else we want a verifier to
+    // see (payer, amount, status) is looked up from the receipt number on
+    // the verify.html page itself once the link is opened.
     const verifyUrl = (STATE.settings.verifyBaseUrl || VERIFICATION_BASE_URL) + "?id=" + encodeURIComponent(data.receiptNo || "");
-    const qrPayload = [
-      "MMLI Receipt",
-      "Receipt Number: " + (data.receiptNo || ""),
-      "Payer: " + (data.payerName || ""),
-      "Amount: " + formatCurrency(data.amountPaid, data.currency),
-      "Status: " + (data.status || ""),
-      verifyUrl
-    ].join("\n");
     try {
-      QRCode.toCanvas(canvas, qrPayload, { width: 96, margin: 1, color: { dark: "#0b2545", light: "#ffffff" } }, function (err) {
+      QRCode.toCanvas(canvas, verifyUrl, { width: 96, margin: 1, color: { dark: "#0b2545", light: "#ffffff" } }, function (err) {
         if (err) console.error("QR generation error", err);
       });
     } catch (e) {

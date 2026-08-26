@@ -27,7 +27,8 @@
     footer: "Thank you for supporting Mind Masters Liberia Initiative.",
     verifyBaseUrl: VERIFICATION_BASE_URL,
     logo: null,      // data URL override; null = use built-in default
-    signature: null  // data URL override; null = use built-in default
+    signature: null, // data URL override; null = use built-in default
+    stamp: null      // data URL override; null = use built-in default
   };
 
   const STORAGE_KEYS = {
@@ -417,6 +418,9 @@
   function getSignatureSrc() {
     return STATE.settings.signature || MMLI_DEFAULT_SIGNATURE_BASE64;
   }
+  function getStampSrc() {
+    return STATE.settings.stamp || MMLI_DEFAULT_STAMP_BASE64;
+  }
 
   function buildReceiptHtml(data) {
     const fin = calcFinancials(data.previousBalance, data.amountDue, data.amountPaid);
@@ -498,7 +502,7 @@
             <div class="r-sign-label">Authorized By</div>
           </div>
           <div class="r-sign-block">
-            <div class="r-sign-img"></div>
+            <div class="r-sign-img"><img class="r-stamp-img" src="${getStampSrc()}" alt="MMLI official stamp"></div>
             <div class="r-sign-line">&nbsp;</div>
             <div class="r-sign-label">MMLI Official Stamp</div>
           </div>
@@ -870,6 +874,11 @@
     const sigHint = document.getElementById("sig-upload-hint");
     if (s.signature) { sigPreview.src = s.signature; sigPreview.style.display = "inline-block"; sigHint.style.display = "none"; }
     else { sigPreview.style.display = "none"; sigHint.style.display = "block"; }
+
+    const stampPreview = document.getElementById("stamp-preview");
+    const stampHint = document.getElementById("stamp-upload-hint");
+    if (s.stamp) { stampPreview.src = s.stamp; stampPreview.style.display = "inline-block"; stampHint.style.display = "none"; }
+    else { stampPreview.style.display = "none"; stampHint.style.display = "block"; }
   }
 
   function collectSettingsFromForm() {
@@ -885,7 +894,8 @@
       footer: document.getElementById("s-footer").value.trim() || DEFAULT_SETTINGS.footer,
       verifyBaseUrl: document.getElementById("s-verify-url").value.trim() || DEFAULT_SETTINGS.verifyBaseUrl,
       logo: STATE.settings.logo,
-      signature: STATE.settings.signature
+      signature: STATE.settings.signature,
+      stamp: STATE.settings.stamp
     };
   }
 
@@ -1067,6 +1077,32 @@
       populateSettingsForm();
       refreshPreviewFromForm();
       showToast("Signature reset to the default.", "success");
+    });
+
+    const stampArea = document.getElementById("stamp-upload-area");
+    const stampInput = document.getElementById("stamp-file-input");
+    stampArea.addEventListener("click", () => stampInput.click());
+    stampArea.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); stampInput.click(); } });
+    stampInput.addEventListener("change", async () => {
+      const file = stampInput.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        STATE.settings.stamp = dataUrl;
+        saveSettings(STATE.settings);
+        populateSettingsForm();
+        refreshPreviewFromForm();
+        showToast("Stamp updated.", "success");
+      } catch (e) {
+        showToast("Could not read that image file.", "error");
+      }
+    });
+    document.getElementById("btn-reset-stamp").addEventListener("click", () => {
+      STATE.settings.stamp = null;
+      saveSettings(STATE.settings);
+      populateSettingsForm();
+      refreshPreviewFromForm();
+      showToast("Stamp reset to the default.", "success");
     });
   }
 

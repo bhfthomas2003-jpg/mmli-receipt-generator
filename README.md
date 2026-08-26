@@ -6,7 +6,8 @@ Liberia Initiative (MMLI)** — *"Unleashing the Genius Within."*
 Runs entirely in the browser. No server, no database, no build step, no
 Node.js, no npm. Upload the files to GitHub Pages and it works.
 
-The MMLI logo and the authorized signature are **already built into the
+The MMLI logo, the authorized signature, and the official MMLI stamp are
+**already built into the
 app** (embedded as Base64 image data inside `assets.js`), so there is
 nothing extra to upload or link — the receipts look right the moment you
 publish the site.
@@ -20,7 +21,7 @@ publish the site.
 | `index.html` | The main application: Create Receipt, Receipt History, Settings. |
 | `verify.html` | The public receipt-verification page (`verify.html?id=MMLI-2026-0001`). |
 | `style.css` | All styling — navy & gold theme, layout, dark mode, print rules, animation. |
-| `assets.js` | The MMLI logo and the authorized signature, embedded as Base64 image data. |
+| `assets.js` | The MMLI logo, the authorized signature, and the official stamp, embedded as Base64 image data. |
 | `script.js` | All application logic for the main app (see section 6 below). |
 | `verify.js` | Logic for the verification page. |
 | `assets/logo.png`, `assets/signature.png` | Reference copies of the images (not required by the app — kept for your records). |
@@ -43,7 +44,7 @@ prints and exports the same way, in light mode or dark mode. Also contains
 the `@media print` rules that hide everything except the receipt.
 
 **`assets.js`** — Two constants, `MMLI_DEFAULT_LOGO_BASE64` and
-`MMLI_DEFAULT_SIGNATURE_BASE64`, holding the logo and signature as
+`MMLI_DEFAULT_SIGNATURE_BASE64`, and `MMLI_DEFAULT_STAMP_BASE64`, holding the logo, signature, and stamp as
 `data:image/png;base64,...` strings. Because these are plain JavaScript
 values, they need no separate image request — they render instantly,
 offline, and survive being copied between GitHub repos with zero broken
@@ -64,7 +65,7 @@ links.
 11. Receipt History table, search, and filters
 12. PDF, PNG, and Print export
 13. Tab switching
-14. Settings (including logo/signature upload)
+14. Settings (including logo/signature/stamp upload)
 15. Dark mode
 16. Event wiring and startup
 
@@ -113,18 +114,19 @@ publishing, if you prefer.)
 
 ---
 
-## 4. Changing the MMLI logo or signature later
+## 4. Changing the MMLI logo, signature, or stamp later
 
 You will **not** need to touch GitHub or any code for this:
 
 1. Open the app → **Settings**.
-2. Under **Organization Logo** or **Authorized Signature**, tap the upload
+2. Under **Organization Logo**, **Authorized Signature**, or **MMLI Official
+   Stamp**, tap the upload
    box and choose a photo from your phone.
 3. Tap **Save Settings**.
 
 The new image is stored in this browser and used everywhere (preview,
 PDF, PNG, print) instead of the built-in default. Tap **Reset to Default**
-at any time to go back to the original MMLI logo or signature that came
+at any time to go back to the original MMLI logo, signature, or stamp that came
 built into the app.
 
 ---

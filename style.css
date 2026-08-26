@@ -747,6 +747,7 @@ input.invalid, select.invalid{
 .r-sign-block{ text-align:center; }
 .r-sign-img{ height:52px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px; }
 .r-sign-img img{ height:100%; object-fit:contain; filter: none; }
+.r-sign-img img.r-stamp-img{ height:135%; opacity:.9; transform: rotate(-7deg); mix-blend-mode:multiply; }
 .r-sign-line{ border-top:1.3px solid #333; padding-top:4px; font-size:.72rem; color:#5b6b79 !important; }
 .r-sign-label{ font-size:.72rem; font-weight:700; color:#333 !important; }
 

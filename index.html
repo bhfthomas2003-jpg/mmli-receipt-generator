@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMLI Receipt Generator</title>
+<meta name="description" content="Create, save, print, and verify professional payment receipts for Mind Masters Liberia Initiative.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark" id="header-logo-wrap">
+        <img id="header-logo-img" src="" alt="MMLI logo" />
+      </div>
+      <div class="brand-text">
+        <div class="org-sub" id="brand-shortname">MMLI</div>
+        <h1 id="brand-name">Mind Masters Liberia Initiative</h1>
+        <div class="motto" id="brand-motto">&ldquo;Unleashing the Genius Within&rdquo;</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
+        <span id="theme-toggle-icon" aria-hidden="true">&#9789;</span>
+        <span id="theme-toggle-label">Dark mode</span>
+      </button>
+    </div>
+  </div>
+  <div class="tagline-row">MMLI RECEIPT GENERATOR &nbsp;&middot;&nbsp; Create &bull; Save &bull; Print &bull; Verify</div>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Main sections">
+    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="view-create" id="tab-create" data-view="create" type="button">Create Receipt</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-history" id="tab-history" data-view="history" type="button">Receipt History</button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="view-settings" id="tab-settings" data-view="settings" type="button">Settings</button>
+    <span class="tab-indicator" id="tab-indicator"></span>
+  </nav>
+</header>
+
+<main>
+
+  <section class="stats-grid" aria-label="Receipt statistics">
+    <div class="stat-card">
+      <div class="stat-label">Total Receipts</div>
+      <div class="stat-value" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Paid</div>
+      <div class="stat-value paid" id="stat-paid">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Partial</div>
+      <div class="stat-value partial" id="stat-partial">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value pending" id="stat-pending">0</div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       VIEW: CREATE RECEIPT
+       =================================================================== -->
+  <section class="view active" id="view-create" role="tabpanel" aria-labelledby="tab-create">
+    <div class="creator-grid">
+
+      <!-- FORM -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>
+            <span>
+              <span class="eyebrow">Receipt Creator</span>
+              Enter Payment Details
+            </span>
+          </h2>
+        </div>
+        <div class="panel-body">
+          <form id="receipt-form" novalidate>
+
+            <div class="field-group">
+              <div class="section-title">Receipt Information</div>
+              <div class="field">
+                <label for="f-receipt-no">Receipt Number</label>
+                <div class="input-with-btn">
+                  <input type="text" id="f-receipt-no" name="receiptNo" autocomplete="off">
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-new-receipt-no" title="Generate New Receipt Number">New No.</button>
+                </div>
+                <div class="field-error" id="err-receipt-no">Please enter a receipt number.</div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="f-date">Receipt Date <span class="req">*</span></label>
+                  <div class="input-with-btn">
+                    <input type="date" id="f-date" name="date" required>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-today">Today</button>
+                  </div>
+                  <div class="field-error" id="err-date">Please choose a receipt date.</div>
+                </div>
+                <div class="field">
+                  <label for="f-status">Payment Status <span class="req">*</span></label>
+                  <select id="f-status" name="status" required>
+                    <option value="PAID">PAID</option>
+                    <option value="PARTIAL">PARTIAL</option>
+                    <option value="PENDING">PENDING</option>
+                    <option value="REFUNDED">REFUNDED</option>
+                  </select>
+                  <div class="field-error" id="err-status">Please choose a payment status.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title">Payer Information</div>
+              <div class="field">
+                <label for="f-name">Full Name <span class="req">*</span></label>
+                <input type="text" id="f-name" name="payerName" placeholder="e.g. John K. Doe" required>
+                <div class="field-error" id="err-name">Please enter the payer's full name.</div>
+              </div>
+              <div class="field">
+                <label for="f-org">Organization / School</label>
+                <input type="text" id="f-org" name="payerOrg" placeholder="e.g. ABC High School">
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="f-phone">Phone Number</label>
+                  <input type="tel" id="f-phone" name="payerPhone" placeholder="e.g. 0775 990 043">
+                </div>
+                <div class="field">
+                  <label for="f-email">Email</label>
+                  <input type="email" id="f-email" name="payerEmail" placeholder="name@example.com">
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-address">Address</label>
+                <input type="text" id="f-address" name="payerAddress" placeholder="e.g. Sinkor, Monrovia">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title">Payment Information</div>
+              <div class="field">
+                <label for="f-category">Payment Category</label>
+                <select id="f-category" name="category">
+                  <option>Competition Registration</option>
+                  <option>Membership Fee</option>
+                  <option>Training Fee</option>
+                  <option>School Registration</option>
+                  <option>Tournament Fee</option>
+                  <option>Event Fee</option>
+                  <option>Donation</option>
+                  <option>Sponsorship</option>
+                  <option>Merchandise</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-description">Description</label>
+                <textarea id="f-description" name="description" placeholder="e.g. National Mathematics Championship 2026 Registration Fee"></textarea>
+              </div>
+
+              <div class="amount-row">
+                <div class="field">
+                  <label for="f-amount-paid">Amount Paid <span class="req">*</span></label>
+                  <input type="number" id="f-amount-paid" name="amountPaid" min="0" step="0.01" placeholder="0.00" required>
+                  <div class="field-error" id="err-amount-paid">Please enter a valid amount paid.</div>
+                </div>
+                <div class="field">
+                  <label for="f-currency">Currency <span class="req">*</span></label>
+                  <select id="f-currency" name="currency" required>
+                    <option value="LRD">LRD</option>
+                    <option value="USD">USD</option>
+                  </select>
+                  <div class="field-error" id="err-currency">Please select a currency.</div>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="f-amount-due">Amount Due</label>
+                  <input type="number" id="f-amount-due" name="amountDue" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="field">
+                  <label for="f-prev-balance">Previous Balance</label>
+                  <input type="number" id="f-prev-balance" name="previousBalance" min="0" step="0.01" placeholder="0.00">
+                </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label for="f-method">Payment Method</label>
+                  <select id="f-method" name="paymentMethod">
+                    <option>Cash</option>
+                    <option>Mobile Money</option>
+                    <option>Bank Transfer</option>
+                    <option>Check</option>
+                    <option>Online Payment</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-ref">Transaction / Reference No.</label>
+                  <input type="text" id="f-ref" name="refNumber" placeholder="e.g. MTN-2381029">
+                </div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title">Optional Notes</div>
+              <div class="field">
+                <label for="f-notes">Notes / Remarks</label>
+                <textarea id="f-notes" name="notes" placeholder="Any additional remarks about this payment"></textarea>
+              </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="action-bar">
+          <button type="button" class="btn btn-primary" id="btn-save-receipt">Save Receipt</button>
+          <button type="button" class="btn btn-outline" id="btn-duplicate-receipt">Duplicate Receipt</button>
+          <button type="button" class="btn btn-ghost" id="btn-clear-form">Clear Form</button>
+        </div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="preview-wrap">
+        <div class="panel">
+          <div class="panel-header">
+            <h2><span><span class="eyebrow">Live Preview</span>Receipt Preview</span></h2>
+          </div>
+          <div class="panel-body" style="padding:16px;">
+            <div class="receipt-scale-outer">
+              <div id="receipt-document"><!-- rendered by script.js --></div>
+            </div>
+          </div>
+          <div class="action-bar" style="flex-wrap:wrap;">
+            <button type="button" class="btn btn-gold" id="btn-download-pdf">Download PDF</button>
+            <button type="button" class="btn btn-outline" id="btn-download-png">Download PNG</button>
+            <button type="button" class="btn btn-outline" id="btn-print">Print Receipt</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       VIEW: RECEIPT HISTORY
+       =================================================================== -->
+  <section class="view" id="view-history" role="tabpanel" aria-labelledby="tab-history">
+    <div class="panel">
+      <div class="panel-header">
+        <h2><span><span class="eyebrow">Records</span>Receipt History</span></h2>
+        <button class="btn btn-danger btn-sm" id="btn-clear-history">Clear Receipt History</button>
+      </div>
+      <div class="history-toolbar">
+        <input type="search" id="history-search" placeholder="Search by receipt no., name, organization, or phone" aria-label="Search receipts">
+        <button class="filter-chip active" data-filter="ALL" type="button">All</button>
+        <button class="filter-chip" data-filter="PAID" type="button">Paid</button>
+        <button class="filter-chip" data-filter="PARTIAL" type="button">Partial</button>
+        <button class="filter-chip" data-filter="PENDING" type="button">Pending</button>
+        <button class="filter-chip" data-filter="REFUNDED" type="button">Refunded</button>
+      </div>
+      <div class="table-scroll">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Receipt No.</th>
+              <th>Date</th>
+              <th>Payer</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="history-empty" style="display:none;">
+          <div class="icon">&#128220;</div>
+          <h3>No receipts yet</h3>
+          <p>Receipts you save will appear here.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       VIEW: SETTINGS
+       =================================================================== -->
+  <section class="view" id="view-settings" role="tabpanel" aria-labelledby="tab-settings">
+    <div class="panel">
+      <div class="panel-header">
+        <h2><span><span class="eyebrow">Configuration</span>Receipt Settings</span></h2>
+      </div>
+      <div class="panel-body">
+        <div class="settings-grid">
+          <div class="field">
+            <label for="s-org-name">Organization Name</label>
+            <input type="text" id="s-org-name">
+          </div>
+          <div class="field">
+            <label for="s-org-short">Short Name</label>
+            <input type="text" id="s-org-short">
+          </div>
+          <div class="field">
+            <label for="s-motto">Motto</label>
+            <input type="text" id="s-motto">
+          </div>
+          <div class="field">
+            <label for="s-authorized">Authorized Person</label>
+            <input type="text" id="s-authorized">
+          </div>
+          <div class="field">
+            <label for="s-phone">Phone</label>
+            <input type="text" id="s-phone">
+          </div>
+          <div class="field">
+            <label for="s-email">Email</label>
+            <input type="email" id="s-email">
+          </div>
+          <div class="field">
+            <label for="s-website">Website</label>
+            <input type="text" id="s-website">
+          </div>
+          <div class="field">
+            <label for="s-address">Address</label>
+            <input type="text" id="s-address">
+          </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label for="s-footer">Footer Message</label>
+            <input type="text" id="s-footer">
+          </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label for="s-verify-url">Verification Base URL</label>
+            <input type="text" id="s-verify-url">
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-top:20px;">
+          <div class="section-title">Organization Logo</div>
+          <div class="logo-upload-area" id="logo-upload-area" tabindex="0" role="button" aria-label="Upload organization logo">
+            <img id="logo-preview" src="" alt="" style="display:none;">
+            <div id="logo-upload-hint">Tap to upload a logo image (PNG/JPG)<br><small>The MMLI logo is already built in as the default.</small></div>
+            <input type="file" id="logo-file-input" accept="image/*" class="visually-hidden">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-outline btn-sm" id="btn-reset-logo" type="button">Reset to Default MMLI Logo</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="section-title">Authorized Signature</div>
+          <div class="logo-upload-area" id="sig-upload-area" tabindex="0" role="button" aria-label="Upload authorized signature">
+            <img id="sig-preview" src="" alt="" style="display:none; max-height:70px;">
+            <div id="sig-upload-hint">Tap to upload a signature image (PNG/JPG)<br><small>The authorized signature is already built in, printed in black.</small></div>
+            <input type="file" id="sig-file-input" accept="image/*" class="visually-hidden">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-outline btn-sm" id="btn-reset-sig" type="button">Reset to Default Signature</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-settings" type="button">Save Settings</button>
+          <button class="btn btn-ghost" id="btn-reset-settings" type="button">Reset All to Defaults</button>
+        </div>
+
+        <div class="settings-note">
+          <span aria-hidden="true">&#9432;</span>
+          <div>
+            <strong>About local storage</strong>
+            Receipts are stored locally in this browser. For centralized multi-device storage and secure online verification, connect this application to a backend database.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  MMLI Receipt Generator &middot; Runs entirely in your browser &middot; No data leaves this device
+</footer>
+
+<div id="modal-region"></div>
+
+<!-- ============ Third-party libraries (CDN, all client-side) ============ -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- ============ App code ============ -->
+<script src="assets.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

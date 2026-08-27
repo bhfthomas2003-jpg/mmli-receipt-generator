@@ -22,6 +22,7 @@ publish the site.
 | `verify.html` | The public receipt-verification page (`verify.html?id=MMLI-2026-0001`). |
 | `style.css` | All styling — navy & gold theme, layout, dark mode, print rules, animation. |
 | `assets.js` | The MMLI logo, the authorized signature, and the official stamp, embedded as Base64 image data. |
+| `qrcode-lib.js` | Self-contained QR code generator (no CDN, no network request) — see section 3.5. |
 | `script.js` | All application logic for the main app (see section 6 below). |
 | `verify.js` | Logic for the verification page. |
 | `assets/logo.png`, `assets/signature.png` | Reference copies of the images (not required by the app — kept for your records). |
@@ -69,8 +70,10 @@ links.
 15. Dark mode
 16. Event wiring and startup
 
-**`verify.js`** — Reads `?id=` from the URL, looks it up in this browser's
-saved receipts, and shows a "VALID RECEIPT" or "RECEIPT NOT FOUND" screen.
+**`verify.js`** — First checks the link's `?p=` / `?c=` query parameters for
+an embedded, checksummed copy of the receipt's details (see section 3.5) and
+verifies it instantly, on any device. Only if a link has no embedded payload
+does it fall back to checking this browser's own saved receipts.
 
 ---
 
@@ -89,7 +92,7 @@ GitHub app or mobile browser:
    the full contents of `index.html` from this project. Scroll down and
    tap **Commit changes**.
 5. Repeat step 3–4 for each remaining file: `verify.html`, `style.css`,
-   `assets.js`, `script.js`, `verify.js`, `README.md`.
+   `assets.js`, `qrcode-lib.js`, `script.js`, `verify.js`, `README.md`.
    - When you type a file name that includes a folder, like
      `assets/logo.png`, GitHub creates the folder automatically. (These two
      image files are optional reference copies — you can skip them if you
@@ -111,6 +114,32 @@ Base URL** field in the app's **Settings** tab to:
 so QR codes point to the right place. (You can also edit the
 `VERIFICATION_BASE_URL` constant at the top of `script.js` before
 publishing, if you prefer.)
+
+---
+
+## 3.5. How QR codes & verification work (no backend required)
+
+Two things used to be a problem: QR codes needing an internet connection
+to load their drawing code, and verification only working on the device
+that created the receipt. Both are fixed:
+
+- **QR codes are fully self-contained.** `qrcode-lib.js` is a small QR
+  encoder bundled directly into the site — nothing is fetched from a CDN
+  to draw a QR code, so it works identically online or completely
+  offline.
+- **Verification travels with the QR code.** Each QR still encodes one
+  plain, tappable URL (so phone cameras recognize it as a link), but that
+  URL's query string carries a compact, base64-encoded copy of the
+  receipt's key details plus a short integrity checksum. Opening the link
+  — on any device, anywhere — decodes and checks it immediately. No
+  lookup, no database, no dependency on the browser that issued it.
+- **The checksum is an integrity check, not a cryptographic signature.**
+  This is a static, no-backend site, so there's no server-held secret key
+  to sign with. The checksum catches accidental corruption or a mangled
+  link; it will not stop someone determined to hand-edit a URL. If MMLI
+  later wants tamper-*proof* (not just tamper-*evident*) verification,
+  that requires a small backend to check a server-side signature — see
+  section 8.
 
 ---
 
@@ -161,26 +190,34 @@ automatically to the current year.
 
 ---
 
-## 7. The current `localStorage` limitation
+## 7. Storage & verification — what's local vs. what travels with the receipt
 
-This app stores everything — settings, receipts, the receipt-number
-counter, your theme choice — in this **one browser, on this one device**,
-using `localStorage`. That means:
+This app stores your **Receipt History**, settings, the receipt-number
+counter, and your theme choice in this **one browser, on this one
+device**, using `localStorage`. That means receipts created on your phone
+will not automatically appear on a laptop or a teammate's phone, and
+clearing your browser's site data will lose your saved history.
 
-- Receipts created on your phone will not automatically appear on a
-  laptop or a teammate's phone.
-- `verify.html` can only confirm receipts that were saved in the *same*
-  browser that issued them ("local verification"). It cannot yet verify a
-  receipt for someone using a different device.
-- Clearing your browser's site data, or switching browsers, will lose your
-  saved receipts (settings and receipt numbering too).
-
-The Settings tab includes a permanent reminder of this limitation, since
-multiple MMLI team members will eventually need shared access.
+**Verification is different and works everywhere, automatically.** Every
+QR code this app generates carries a compact, checksummed copy of that
+receipt's key details directly inside the link (see section 3.5). Opening
+that link — or scanning that QR — verifies the receipt instantly on *any*
+device, with no lookup, no database, and no dependency on the browser
+that created it. The Settings tab explains this distinction plainly.
 
 ---
 
-## 8. Connecting a real backend later (e.g. Firebase)
+## 8. Connecting a real backend later (optional)
+
+Cross-device verification already works out of the box (section 3.5), so
+a backend is **not required** for that. A backend mainly becomes useful
+if MMLI wants to:
+- Keep one shared, always-current Receipt History across every team
+  member's device (rather than each device holding only what it created).
+- Be able to **revoke or void** a receipt after the fact (the embedded-QR
+  verification confirms the data matches what was issued; it can't know
+  about a cancellation that happened afterward).
+- Centrally manage organization Settings across devices.
 
 The code is structured so this upgrade doesn't require a rebuild:
 
@@ -190,16 +227,16 @@ The code is structured so this upgrade doesn't require a rebuild:
   and `setDoc(...)`), keeping the same function names and the same
   shape of data, and everything else (form, preview, PDF, history table)
   keeps working unchanged.
-- **Verification:** `lookupReceipt()` in `verify.js` is clearly marked as
-  the single function to replace with a real API/Firestore lookup, so
-  `verify.html` can confirm a receipt from *any* device, not just the one
-  that created it.
+- **Verification:** `lookupReceiptLocally()` in `verify.js` is the
+  fallback path for links without an embedded payload — extend it with a
+  real API/Firestore lookup (e.g. to also check revocation status)
+  without touching the embedded-payload path that already works.
 - **Settings:** `loadSettings()` / `saveSettings()` can be swapped the
   same way if you want shared, centrally-managed organization settings.
 
 A typical path: create a free Firebase project → enable Firestore → add
 the Firebase Web SDK via a CDN `<script>` tag (still no npm/build step
-required) → swap the four functions above. Everything else — layout,
+required) → swap the functions above. Everything else — layout,
 receipt design, PDF/PNG/print, QR codes, number-to-words — stays exactly
 as it is.
 
@@ -214,6 +251,12 @@ Before finalizing, the following were checked:
   OVERPAYMENT, with blank/invalid inputs never producing `NaN`.
 - Receipt-number sequencing across page reloads, manual number entry, and
   year rollover.
+- QR generation: the bundled encoder was tested by rendering codes and
+  decoding them back programmatically (short and long payloads, up to
+  version-14-sized verification URLs), confirming exact round-trip
+  matches.
+- Verification round-trip: embedded-payload encode → URL → decode →
+  checksum match, and checksum-mismatch (tamper) detection.
 - All JavaScript files pass a syntax check.
 
 Because this environment cannot run a real mobile browser, please do a

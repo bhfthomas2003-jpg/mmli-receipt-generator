@@ -235,6 +235,71 @@
   }
 
   /* =======================================================================
+     4b. SELF-CONTAINED VERIFICATION (no backend required)
+     -----------------------------------------------------------------------
+     Each receipt's QR code encodes ONE plain URL (so phone cameras still
+     treat it as a tappable link) — but that URL's query string carries a
+     compact, base64url-encoded copy of the receipt's key details plus a
+     short integrity checksum. That means verify.html can confirm a receipt
+     on ANY device, the moment the link is opened — it never needs to find
+     the receipt in that device's local storage.
+
+     Note on the checksum: this runs entirely in the browser with no server
+     or secret key, so it protects against accidental corruption / mangled
+     links, not against a determined forger who edits the URL by hand. It
+     is an integrity check, not a cryptographic signature.
+     ======================================================================= */
+  function utf8ToB64Url(str) {
+    const b64 = btoa(unescape(encodeURIComponent(str)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function fnv1aHex(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(16).padStart(8, "0");
+  }
+
+  function buildVerifyPayload(data, fin) {
+    const p = {
+      r: data.receiptNo || "",
+      n: data.payerName || "",
+      o: data.payerOrg || "",
+      c: data.currency || "LRD",
+      a: fin.amountPaid,
+      d: data.date || "",
+      s: fin.statusText || "",
+      g: data.category || "",
+      m: data.paymentMethod || ""
+    };
+    // Drop empty fields to keep the QR payload (and thus the QR image) small.
+    Object.keys(p).forEach(k => { if (p[k] === "" || p[k] === undefined || p[k] === null) delete p[k]; });
+    return p;
+  }
+
+  function buildVerifyUrl(data) {
+    const fin = calcFinancials(data.previousBalance, data.amountDue, data.amountPaid);
+    const base = STATE.settings.verifyBaseUrl || VERIFICATION_BASE_URL;
+    const receiptNo = data.receiptNo || "";
+    let url = base + "?id=" + encodeURIComponent(receiptNo);
+    try {
+      const payload = buildVerifyPayload(data, fin);
+      const json = JSON.stringify(payload);
+      const encoded = utf8ToB64Url(json);
+      const checksum = fnv1aHex(json);
+      url += "&p=" + encoded + "&c=" + checksum;
+    } catch (e) {
+      // If encoding fails for any reason, we still hand back a working
+      // (local-lookup-only) verification link rather than no link at all.
+      console.error("Could not embed verification payload", e);
+    }
+    return url;
+  }
+
+  /* =======================================================================
      5. FINANCIAL CALCULATIONS
      ======================================================================= */
   function calcFinancials(previousBalance, amountDue, amountPaid) {
@@ -491,7 +556,7 @@
           <div id="r-qr-canvas-holder"></div>
           <div class="r-qr-caption">
             <strong>Scan to verify receipt</strong>
-            Local verification available in this browser. Online verification requires a connected backend (see Settings).
+            This code carries the receipt's details with it, so it can be verified on any device, instantly.
           </div>
         </div>
 
@@ -516,28 +581,30 @@
 
   function renderQrInto(container, data) {
     container.innerHTML = "";
-    if (typeof QRCode === "undefined") {
-      const note = document.createElement("div");
-      note.style.cssText = "width:96px;height:96px;display:flex;align-items:center;justify-content:center;border:1px dashed #999;font-size:.65rem;text-align:center;color:#888;border-radius:6px;";
-      note.textContent = "QR unavailable offline";
-      container.appendChild(note);
-      return;
-    }
     const canvas = document.createElement("canvas");
+    canvas.setAttribute("aria-label", "QR code to verify this receipt");
     container.appendChild(canvas);
-    // Encode ONLY the verification URL. A QR code is only recognized by a
-    // phone camera as a tappable "open link" if its entire payload is a
-    // single valid URL — mixing in labels/amount/etc. turns it into plain
-    // text that scanners can't act on. Anything else we want a verifier to
-    // see (payer, amount, status) is looked up from the receipt number on
-    // the verify.html page itself once the link is opened.
-    const verifyUrl = (STATE.settings.verifyBaseUrl || VERIFICATION_BASE_URL) + "?id=" + encodeURIComponent(data.receiptNo || "");
+    // The whole payload is still ONE valid URL (details ride along as query
+    // parameters), so phone cameras recognise it as a tappable link — see
+    // buildVerifyUrl() / the note above section 4b for how verification
+    // data is embedded. qrcode-lib.js is bundled locally, so this works
+    // identically online or fully offline; no CDN, no network request.
+    const verifyUrl = buildVerifyUrl(data);
     try {
-      QRCode.toCanvas(canvas, verifyUrl, { width: 96, margin: 1, color: { dark: "#0b2545", light: "#ffffff" } }, function (err) {
-        if (err) console.error("QR generation error", err);
+      MMLIQRCode.toCanvas(verifyUrl, canvas, {
+        ecLevel: "M",
+        cellSize: 4,
+        margin: 2,
+        dark: "#0b2545",
+        light: "#ffffff"
       });
     } catch (e) {
-      console.error("QR generation threw", e);
+      console.error("QR generation failed", e);
+      container.innerHTML = "";
+      const note = document.createElement("div");
+      note.className = "r-qr-error";
+      note.textContent = "Could not generate QR for this receipt.";
+      container.appendChild(note);
     }
   }
 

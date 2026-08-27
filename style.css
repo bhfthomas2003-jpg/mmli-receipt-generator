@@ -642,13 +642,19 @@ input.invalid, select.invalid{
 .r-section{
   margin: 14px 0;
   padding-top: 12px;
-  border-top: 1px dashed #cfc7a8;
+  border-top: none;
+  position: relative;
+}
+.r-section::before{
+  content:"";
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, #cfc7a8 15%, #cfc7a8 85%, transparent);
 }
 .r-section-title{
   font-family: var(--font-display);
   font-size:.72rem;
   font-weight:800;
-  letter-spacing:.12em;
+  letter-spacing:.14em;
   text-transform:uppercase;
   color: var(--gold-600) !important;
   margin-bottom:8px;
@@ -728,33 +734,42 @@ input.invalid, select.invalid{
 .r-badge.REFUNDED{ background:var(--info-bg); color:var(--info) !important; }
 
 .r-qr-row{
-  display:flex; align-items:center; gap:14px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed #cfc7a8;
+  display:flex; align-items:center; gap:16px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(11,37,69,.03), rgba(11,37,69,.015));
+  border: 1px solid rgba(11,37,69,.08);
 }
-.r-qr-row canvas, .r-qr-row img{ border-radius:6px; border:1px solid #e3ddc9; }
-.r-qr-caption{ font-size:.74rem; color:#5b6b79 !important; }
-.r-qr-caption strong{ display:block; color:#1c2430 !important; font-size:.8rem; }
+.r-qr-row canvas, .r-qr-row img{
+  border-radius:8px;
+  border:1px solid #e3ddc9;
+  background:#fff;
+  box-shadow: 0 1px 3px rgba(11,37,69,.08);
+}
+.r-qr-caption{ font-size:.76rem; color:#5b6b79 !important; line-height:1.45; }
+.r-qr-caption strong{ display:block; color:#1c2430 !important; font-size:.82rem; margin-bottom:2px; letter-spacing:.01em; }
 
 .r-sign-row{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  margin-top: 22px;
-  padding-top: 10px;
+  margin-top: 26px;
+  padding-top: 12px;
 }
 .r-sign-block{ text-align:center; }
-.r-sign-img{ height:52px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:2px; }
+.r-sign-img{ height:56px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:6px; }
 .r-sign-img img{ height:100%; object-fit:contain; filter: none; }
 .r-sign-img img.r-stamp-img{ height:135%; opacity:.9; transform: rotate(-7deg); mix-blend-mode:multiply; }
 .r-sign-line{ border-top:1.3px solid #333; padding-top:4px; font-size:.72rem; color:#5b6b79 !important; }
 .r-sign-label{ font-size:.72rem; font-weight:700; color:#333 !important; }
 
-/* Signature block: no underline — the signature image itself sits lower
-   and centered in a slightly taller box instead of being pinned to a line. */
-.r-sign-img--plain{ height:70px; align-items:center; padding-top:10px; }
-.r-sign-line--plain{ border-top:none; padding-top:0; margin-top:6px; }
+/* Signature block: the image sits low in its box, resting just above the
+   "Authorized By" label — matching baseline with the stamp column instead
+   of floating center with awkward empty space above it. No underline. */
+.r-sign-img--plain{ height:60px; align-items:flex-end; padding-top:0; margin-bottom:8px; }
+.r-sign-img--plain img{ max-width:168px; }
+.r-sign-line--plain{ border-top:none; padding-top:0; margin-top:2px; }
 
 .r-footer{
   text-align:center;

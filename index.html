@@ -382,8 +382,8 @@
         <div class="settings-note">
           <span aria-hidden="true">&#9432;</span>
           <div>
-            <strong>About local storage</strong>
-            Receipts are stored locally in this browser. For centralized multi-device storage and secure online verification, connect this application to a backend database.
+            <strong>About storage &amp; verification</strong>
+            Your Receipt History list is stored locally in this browser only. Verification is different: every receipt's QR code carries its own details, so it can be scanned and confirmed on <em>any</em> device — no account, backend, or internet-connected database required. Anyone with the physical or PDF receipt can verify it; only your saved history stays private to this device.
           </div>
         </div>
       </div>
@@ -399,11 +399,13 @@
 <div id="modal-region"></div>
 
 <!-- ============ Third-party libraries (CDN, all client-side) ============ -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <!-- ============ App code ============ -->
+<!-- qrcode-lib.js is bundled locally (no CDN, no network request) so QR
+     codes always render, online or fully offline. -->
+<script src="qrcode-lib.js"></script>
 <script src="assets.js"></script>
 <script src="script.js"></script>
 </body>

@@ -940,51 +940,68 @@
       const filename = (data.receiptNo || "receipt") + ".png";
       const shareText = "Payment receipt " + data.receiptNo + " — Mind Masters Liberia Initiative.";
 
-      let file = null;
-      if (typeof File !== "undefined") {
-        file = new File([blob], filename, { type: "image/png" });
+      const file = (typeof File !== "undefined") ? new File([blob], filename, { type: "image/png" }) : null;
+      const shareTitle = "MMLI Payment Receipt " + data.receiptNo;
+
+      // Preferred path: native share sheet with the image FILE attached
+      // directly — this is what makes WhatsApp, Mail, Gmail, etc. show up
+      // as share targets with the actual receipt attached, not just text.
+      //
+      // We try navigator.share({files}) whenever it exists, even if
+      // canShare() is missing or says no — some browsers implement file
+      // sharing but report canShare incorrectly — and only fall back if
+      // the actual share call itself fails.
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        try {
+          await navigator.share({ files: [file], title: shareTitle, text: shareText });
+          showToast("Receipt shared.", "success");
+          return;
+        } catch (shareErr) {
+          if (shareErr && shareErr.name === "AbortError") return; // user closed the share sheet
+          console.warn("File share failed, falling back:", shareErr);
+          // fall through to the fallbacks below
+        }
       }
 
-      // Preferred path: native share sheet with the image file attached
-      // directly — this is what lets WhatsApp, Mail, Gmail, etc. show up
-      // as share targets on phones and most modern desktop browsers.
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "MMLI Payment Receipt " + data.receiptNo,
-          text: shareText
-        });
-        showToast("Receipt shared.", "success");
-        return;
+      // Fallback for browsers that can't attach a file to the share sheet
+      // (e.g. desktop Chrome/Firefox, some in-app browsers). We can't
+      // launch WhatsApp or Mail with a file already attached from a web
+      // page — that's a browser/OS limitation, not something this app can
+      // work around — so instead we do the next best thing: copy the
+      // receipt image straight to the clipboard so it can be PASTED
+      // directly into a WhatsApp/email chat, and also download it as a
+      // backup, then hand off to whichever share option is available.
+      let copied = false;
+      try {
+        if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          copied = true;
+        }
+      } catch (clipErr) {
+        console.warn("Clipboard image copy failed:", clipErr);
       }
 
-      // Browser supports Web Share but not file attachments — share the
-      // text/title, and separately download the image so it can be
-      // attached manually.
-      if (navigator.share) {
-        const link = document.createElement("a");
-        link.download = filename;
-        link.href = URL.createObjectURL(blob);
-        link.click();
-        URL.revokeObjectURL(link.href);
-        await navigator.share({ title: "MMLI Payment Receipt " + data.receiptNo, text: shareText });
-        showToast("Image downloaded — attach it in the share sheet.", "success");
-        return;
-      }
-
-      // No Web Share API at all (older/desktop browsers): download the
-      // image and open a pre-filled email as the most useful fallback.
-      // Neither mailto: nor WhatsApp's click-to-chat link can attach a
-      // file programmatically, so the file must be attached by hand.
       const link = document.createElement("a");
       link.download = filename;
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
-      const mailto = "mailto:?subject=" + encodeURIComponent("MMLI Payment Receipt " + data.receiptNo) +
-        "&body=" + encodeURIComponent(shareText + "\n\nThe receipt image has been downloaded to your device — please attach it to this email before sending.");
-      window.location.href = mailto;
-      showToast("Image downloaded — attach it to the email that just opened, or to a WhatsApp chat.", "success");
+
+      if (navigator.share) {
+        // Text-only share is still possible; hand off to it so the user
+        // can pick WhatsApp/Mail, then paste or attach the image.
+        await navigator.share({ title: shareTitle, text: shareText });
+      } else {
+        const mailto = "mailto:?subject=" + encodeURIComponent(shareTitle) +
+          "&body=" + encodeURIComponent(shareText + "\n\n" + (copied
+            ? "The receipt image is on your clipboard — paste it (Ctrl/Cmd+V) into this email, and it has also been downloaded to your device."
+            : "The receipt image has been downloaded to your device — please attach it before sending."));
+        window.location.href = mailto;
+      }
+
+      showToast(copied
+        ? "Image copied to your clipboard and downloaded — paste it into WhatsApp or your email."
+        : "Image downloaded — attach it to the email or chat that just opened.", "success");
     } catch (e) {
       if (e && e.name === "AbortError") return; // user closed the native share sheet
       console.error(e);

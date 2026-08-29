@@ -721,6 +721,17 @@
       const qrHolder = liveDoc.querySelector("#r-qr-canvas-holder");
       if (qrHolder) renderQrInto(qrHolder, r);
     }
+    const modalCard = document.querySelector("#modal-region .modal-card");
+    if (modalCard) {
+      const actions = document.createElement("div");
+      actions.className = "modal-actions";
+      actions.innerHTML =
+        '<button class="btn btn-outline" id="modal-pdf-btn" type="button">&#8681; Download PDF</button>' +
+        '<button class="btn btn-gold" id="modal-share-btn" type="button">&#128228; Share</button>';
+      modalCard.appendChild(actions);
+      document.getElementById("modal-pdf-btn").addEventListener("click", () => downloadPdfForReceipt(r));
+      document.getElementById("modal-share-btn").addEventListener("click", () => shareReceiptImage(r));
+    }
   }
 
   /* =======================================================================
@@ -769,6 +780,7 @@
         '<button class="icon-btn" data-action="edit" title="Edit" aria-label="Edit receipt ' + escapeHtml(r.receiptNo) + '">&#9998;</button>' +
         '<button class="icon-btn" data-action="duplicate" title="Duplicate" aria-label="Duplicate receipt ' + escapeHtml(r.receiptNo) + '">&#8942;</button>' +
         '<button class="icon-btn" data-action="pdf" title="Download PDF" aria-label="Download PDF for receipt ' + escapeHtml(r.receiptNo) + '">&#8681;</button>' +
+        '<button class="icon-btn" data-action="share" title="Share" aria-label="Share receipt ' + escapeHtml(r.receiptNo) + '">&#128228;</button>' +
         '<button class="icon-btn" data-action="delete" title="Delete" aria-label="Delete receipt ' + escapeHtml(r.receiptNo) + '">&#128465;</button>' +
         "</div></td>";
       tr.querySelector('[data-action="view"]').addEventListener("click", () => viewReceipt(r.receiptNo));
@@ -776,6 +788,7 @@
       tr.querySelector('[data-action="duplicate"]').addEventListener("click", () => duplicateReceipt(r.receiptNo));
       tr.querySelector('[data-action="delete"]').addEventListener("click", () => deleteReceipt(r.receiptNo));
       tr.querySelector('[data-action="pdf"]').addEventListener("click", () => downloadPdfForReceipt(r));
+      tr.querySelector('[data-action="share"]').addEventListener("click", () => shareReceiptImage(r));
       tbody.appendChild(tr);
     }
   }
@@ -811,11 +824,21 @@
   /* =======================================================================
      11. EXPORT: PDF / PNG / PRINT
      ======================================================================= */
+  // Master export width, in CSS px. This MUST match the #receipt-document
+  // design width in style.css (480px) exactly, so a downloaded/shared PNG or
+  // PDF is pixel-proportional to what the user sees in the live preview —
+  // never a re-flowed 620px (or mobile-shrunk) version of the layout.
+  const RECEIPT_EXPORT_WIDTH_PX = 480;
+
   async function renderReceiptOffscreenForExport(data) {
-    // Build a detached, light-themed clone so exports are correct even in dark mode.
+    // Build a detached, theme-independent clone at the exact on-screen
+    // design width (not the responsive/shrunk width the live preview may
+    // be displayed at on a narrow phone screen), so exports always match
+    // the true receipt proportions.
     const clone = document.createElement("div");
     clone.id = "receipt-document";
-    clone.style.width = "620px";
+    clone.style.width = RECEIPT_EXPORT_WIDTH_PX + "px";
+    clone.style.maxWidth = "none";
     clone.innerHTML = buildReceiptHtml(data);
     const host = document.createElement("div");
     host.style.position = "fixed";
@@ -891,6 +914,98 @@
 
   function printCurrentReceipt() {
     window.print();
+  }
+
+  function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob); else reject(new Error("Could not create image data."));
+      }, "image/png");
+    });
+  }
+
+  /* =======================================================================
+     11b. SHARE (native share sheet — email, WhatsApp, etc.)
+     ======================================================================= */
+  async function shareReceiptImage(data) {
+    try {
+      if (!data.receiptNo) { showToast("This receipt has no receipt number.", "error"); return; }
+      showToast("Preparing receipt to share…", "success");
+
+      // Same fixed-width offscreen capture as PDF/PNG export, so the shared
+      // image is always the exact receipt proportions, never a resized or
+      // cropped version.
+      const canvas = await captureReceiptCanvas(data);
+      const blob = await canvasToPngBlob(canvas);
+      const filename = (data.receiptNo || "receipt") + ".png";
+      const shareText = "Payment receipt " + data.receiptNo + " — Mind Masters Liberia Initiative.";
+
+      let file = null;
+      if (typeof File !== "undefined") {
+        file = new File([blob], filename, { type: "image/png" });
+      }
+
+      // Preferred path: native share sheet with the image file attached
+      // directly — this is what lets WhatsApp, Mail, Gmail, etc. show up
+      // as share targets on phones and most modern desktop browsers.
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "MMLI Payment Receipt " + data.receiptNo,
+          text: shareText
+        });
+        showToast("Receipt shared.", "success");
+        return;
+      }
+
+      // Browser supports Web Share but not file attachments — share the
+      // text/title, and separately download the image so it can be
+      // attached manually.
+      if (navigator.share) {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        await navigator.share({ title: "MMLI Payment Receipt " + data.receiptNo, text: shareText });
+        showToast("Image downloaded — attach it in the share sheet.", "success");
+        return;
+      }
+
+      // No Web Share API at all (older/desktop browsers): download the
+      // image and open a pre-filled email as the most useful fallback.
+      // Neither mailto: nor WhatsApp's click-to-chat link can attach a
+      // file programmatically, so the file must be attached by hand.
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+      const mailto = "mailto:?subject=" + encodeURIComponent("MMLI Payment Receipt " + data.receiptNo) +
+        "&body=" + encodeURIComponent(shareText + "\n\nThe receipt image has been downloaded to your device — please attach it to this email before sending.");
+      window.location.href = mailto;
+      showToast("Image downloaded — attach it to the email that just opened, or to a WhatsApp chat.", "success");
+    } catch (e) {
+      if (e && e.name === "AbortError") return; // user closed the native share sheet
+      console.error(e);
+      showToast("Could not share the receipt. " + (e && e.message ? e.message : "Please try again."), "error");
+    }
+  }
+
+  // Creates the Share button next to the download buttons if the page's
+  // HTML doesn't already define one with id="btn-share-receipt".
+  function ensureShareButton() {
+    let btn = document.getElementById("btn-share-receipt");
+    if (btn) return btn;
+    const anchor = document.getElementById("btn-download-png") || document.getElementById("btn-download-pdf") || document.getElementById("btn-print");
+    if (!anchor || !anchor.parentNode) return null;
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btn-share-receipt";
+    btn.className = "btn btn-gold";
+    btn.innerHTML = "&#128228; Share";
+    anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+    return btn;
   }
 
   /* =======================================================================
@@ -1051,6 +1166,8 @@
     document.getElementById("btn-download-pdf").addEventListener("click", () => downloadPdfForReceipt(getFormData()));
     document.getElementById("btn-download-png").addEventListener("click", () => downloadPngForReceipt(getFormData()));
     document.getElementById("btn-print").addEventListener("click", printCurrentReceipt);
+    const shareBtn = ensureShareButton();
+    if (shareBtn) shareBtn.addEventListener("click", () => shareReceiptImage(getFormData()));
   }
 
   function initHistoryActions() {
